@@ -4,23 +4,38 @@ import concurrent.futures
 from decouple import config
 
 
+def extract_synonyms(response_text):
+    # 检查是否存在 'A:' 格式
+    if '\nA:' in response_text:
+        # 将响应文本分割为问题和答案
+        parts = response_text.split('\n')
+        answer = parts[1] if len(parts) > 1 else ''
+        # 提取答案部分中的同义词列表
+        if answer.startswith("A:"):
+            return answer[2:].strip()
+    else:
+        # 直接返回整个字符串作为同义词列表
+        return response_text.strip()
+    return None
+
+
 def find_synonyms(word, client):
     prompt = f"""你作为一个杰出的语文老师，现在你需要帮我进行语言同义词回答，请仅提供相关性最高的前10个同义词，同义词之间请用逗号‘,’隔开，请严格按照格式要求完成。
     
 样例1
 Q: 夏天
-A: 夏日, 严夏, 热夏, 夏季
+A: 夏日,严夏,热夏,夏季
 
 样例2
 Q: 开心
-A: 快乐, 高兴, 乐呵呵
+A: 快乐,高兴,乐呵呵
 
 Q: {word}
 A: 
 """
     try:
         response = client.chat.completions.create(
-            model="glm-3-turbo",
+            model="glm-4",
             messages=[
                 {
                     "role": "user",
@@ -43,6 +58,8 @@ A:
         content = choice.message.content
 
         # 分割同义词
+        content = extract_synonyms(content)
+        # print(content)
         synonyms = content.split(',')
         all_synonyms.extend([synonym.strip() for synonym in synonyms])
 
